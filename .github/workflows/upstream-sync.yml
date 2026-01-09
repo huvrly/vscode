@@ -1,0 +1,87 @@
+name: Upstream sync (microsoft/vscode → huvrly)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Nightly (UTC)
+    - cron: '17 2 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    env:
+      UPSTREAM_REMOTE: https://github.com/microsoft/vscode.git
+      UPSTREAM_BRANCH: main
+      PRODUCT_BRANCH: huvrly-main
+      MIRROR_BRANCH: upstream-main
+
+    steps:
+      - name: Checkout product branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PRODUCT_BRANCH }}
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "huvrly-bot"
+          git config user.email "bot@huvrly.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream "${UPSTREAM_REMOTE}" || true
+          git remote set-url upstream "${UPSTREAM_REMOTE}"
+          git fetch upstream "${UPSTREAM_BRANCH}" --tags --prune
+
+      - name: Update mirror branch (upstream-main)
+        run: |
+          # Force-update our mirror branch to match upstream/main.
+          git branch -f "${MIRROR_BRANCH}" "upstream/${UPSTREAM_BRANCH}"
+          git push origin "${MIRROR_BRANCH}" --force
+
+      - name: Prepare sync branch
+        id: prep
+        run: |
+          ts=$(date -u +"%Y%m%d-%H%M%S")
+          echo "ts=$ts" >> "$GITHUB_OUTPUT"
+          sync_branch="sync/upstream-${ts}"
+          echo "sync_branch=$sync_branch" >> "$GITHUB_OUTPUT"
+
+          git checkout -B "$sync_branch" "origin/${PRODUCT_BRANCH}"
+          # Merge upstream changes into product branch tip.
+          git merge --no-ff --no-edit "upstream/${UPSTREAM_BRANCH}" || true
+
+          git status --porcelain=v1 | cat
+
+      - name: Push sync branch
+        run: |
+          git push origin "${{ steps.prep.outputs.sync_branch }}" --force
+
+      - name: Create or update PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.prep.outputs.sync_branch }}
+          base: ${{ env.PRODUCT_BRANCH }}
+          title: "chore(sync): upstream vscode @ ${{ steps.prep.outputs.ts }}"
+          body: |
+            Automated upstream sync from `${{ env.UPSTREAM_REMOTE }}` branch `${{ env.UPSTREAM_BRANCH }}`.
+
+            - Mirror branch updated: `${{ env.MIRROR_BRANCH }}`
+            - Product branch targeted: `${{ env.PRODUCT_BRANCH }}`
+
+            Notes:
+            - If this PR has conflicts, resolve them and merge.
+            - Keep Huvrly customizations in a built-in extension when possible.
+          labels: |
+            upstream-sync
+          draft: false
