@@ -1,0 +1,68 @@
+{
+  "name": "huvrly",
+  "displayName": "Huvrly",
+  "description": "Huvrly built-in extension",
+  "version": "0.0.1",
+  "publisher": "huvrly",
+  "private": true,
+  "engines": {
+    "vscode": "^1.0.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:huvrly.agentStatus"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "huvrly.agentStatus.refresh",
+        "title": "Huvrly: Refresh Agent Status"
+      },
+      {
+        "command": "huvrly.openDocs",
+        "title": "Huvrly: Open Docs"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "huvrly",
+          "title": "Huvrly",
+          "icon": "resources/huvrly.svg"
+        }
+      ]
+    },
+    "views": {
+      "huvrly": [
+        {
+          "id": "huvrly.agentStatus",
+          "name": "Agent Status",
+          "icon": "resources/agent-status.svg"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Huvrly",
+      "properties": {
+        "huvrly.agent.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:3001",
+          "description": "Base URL for the local Huvrly Agent/Platform API (expects GET /agent/status)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.95.0",
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0"
+  }
+}

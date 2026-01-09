@@ -81,6 +81,10 @@
 				},
 				"publisherDisplayName": "Microsoft"
 			}
+		},
+		{
+			"name": "huvrly.huvrly",
+			"version": "0.0.1"
 		}
 	],
 	"defaultChatAgent": {
